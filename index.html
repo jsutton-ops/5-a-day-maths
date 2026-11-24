@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measure Up · 5 a Day</title>
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --card: #ffffff;
+    --ink: #1d2433;
+    --muted: #5d6577;
+    --line: #e3e0d8;
+    --brand: #2f4fd0;
+    --brand-soft: #e7ecff;
+    --amber: #f2a33a;
+    --good: #1f8a5b;
+    --good-soft: #e3f5ec;
+    --bad: #c23d3d;
+    --bad-soft: #fbe9e9;
+    --radius: 16px;
+    --shadow: 0 1px 2px rgba(20,30,60,.06), 0 8px 24px rgba(20,30,60,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15181f; --card: #1f232d; --ink: #eef0f5; --muted: #a3aabb; --line: #2f3442;
+      --brand: #7d94ff; --brand-soft: #262d48; --good: #4fc58d; --good-soft: #1c3329;
+      --bad: #ef7a7a; --bad-soft: #3a2224; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.5;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 48px; }
+
+  /* Header with a ruler edge */
+  header { position: relative; padding: 18px 20px 26px; border-radius: var(--radius);
+    background: var(--brand); color: #fff; overflow: hidden; box-shadow: var(--shadow); }
+  header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 14px;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.85) 0 2px, transparent 2px 50px) bottom/100% 14px no-repeat,
+      repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 1px, transparent 1px 10px) bottom/100% 7px no-repeat; }
+  .brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 1.6rem; letter-spacing: -.01em; }
+  .sub { opacity: .85; font-size: .95rem; }
+  .stats { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .pill { background: rgba(255,255,255,.16); border-radius: 999px; padding: 4px 12px; font-size: .9rem; font-weight: 600; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 22px; margin-top: 18px; }
+
+  .dots { display: flex; gap: 8px; justify-content: center; margin: 18px 0 0; }
+  .dot { width: 34px; height: 8px; border-radius: 6px; background: var(--line); transition: background .2s; }
+  .dot.now { background: var(--brand); }
+  .dot.ok { background: var(--good); }
+  .dot.no { background: var(--bad); }
+
+  .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+    color: var(--muted); font-size: .9rem; margin-bottom: 10px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { background: var(--brand-soft); color: var(--brand); border-radius: 999px; padding: 2px 10px; font-weight: 600; font-size: .8rem; }
+  .chip.h { background: #fff1dc; color: #9a5b00; }
+  @media (prefers-color-scheme: dark) { .chip.h { background: #3b2e1a; color: #f5c27a; } }
+
+  .question { font-size: 1.2rem; font-weight: 600; margin: 4px 0 18px; }
+  .options { display: grid; gap: 10px; }
+  .opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    font: inherit; font-size: 1.05rem; color: var(--ink); background: var(--card);
+    border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer;
+    transition: border-color .15s, background .15s, transform .05s; }
+  .opt:hover:not(:disabled) { border-color: var(--brand); }
+  .opt:active:not(:disabled) { transform: scale(.995); }
+  .opt:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+  .opt:disabled { cursor: default; }
+  .key { flex: none; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+    background: var(--brand-soft); color: var(--brand); font-weight: 700; font-size: .9rem; }
+  .opt .mark { margin-left: auto; font-weight: 700; }
+  .opt.correct { border-color: var(--good); background: var(--good-soft); }
+  .opt.correct .key { background: var(--good); color: #fff; }
+  .opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+  .opt.wrong .key { background: var(--bad); color: #fff; }
+  .opt.faded { opacity: .55; }
+
+  .feedback { margin-top: 16px; border-radius: 12px; padding: 14px 16px; display: none; }
+  .feedback.show { display: block; }
+  .feedback.ok { background: var(--good-soft); }
+  .feedback.no { background: var(--bad-soft); }
+  .feedback strong { display: block; margin-bottom: 4px; }
+  .actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+  .btn { font: inherit; font-weight: 700; border: 0; border-radius: 12px; padding: 12px 22px;
+    background: var(--brand); color: #fff; cursor: pointer; }
+  .btn:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+  .btn.ghost { background: transparent; color: var(--brand); border: 2px solid var(--brand); }
+
+  .done { text-align: center; }
+  .score { font-size: 3rem; font-weight: 800; margin: 6px 0 0; letter-spacing: -.02em; }
+  .stars { font-size: 1.8rem; letter-spacing: 4px; margin: 4px 0 6px; }
+  .stars .off { opacity: .2; }
+  .msg { color: var(--muted); margin: 0 0 8px; }
+  .next { margin-top: 14px; padding: 12px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+
+  .review { text-align: left; margin-top: 18px; }
+  .review details { border-top: 1px solid var(--line); padding: 10px 0; }
+  .review summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; gap: 10px; }
+  .review summary::-webkit-details-marker { display: none; }
+  .review .r-ans { margin: 8px 0 0 30px; color: var(--muted); font-size: .95rem; }
+  .tick { color: var(--good); } .cross { color: var(--bad); }
+
+  .notice { text-align: center; padding: 30px 22px; }
+  .notice h2 { margin: 0 0 6px; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 22px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><h1 id="title">Measure Up</h1><span class="sub" id="subtitle">5 a day</span></div>
+    <div class="stats">
+      <span class="pill" id="dayPill">Day –</span>
+      <span class="pill" id="streakPill" title="Days in a row completed">🔥 Streak 0</span>
+      <span class="pill" id="starPill" title="Total correct answers">⭐ 0</span>
+    </div>
+  </header>
+
+  <div class="dots" id="dots" aria-hidden="true"></div>
+  <main id="app" class="card" aria-live="polite"></main>
+  <footer>New questions unlock at midnight. Your progress is saved on this device.</footer>
+</div>
+
+<script src="questions.js"></script>
+<script>
+/* ======================= SETTINGS (edit these) ======================= */
+const CONFIG = {
+  startDate: "2026-09-01",     // Day 1 of the question bank (YYYY-MM-DD)
+  weekdaysOnly: false,         // true = new set Mon–Fri only, nothing at weekends
+  wrapAround: true,            // after the last day, start again from day 1
+  allowDateOverride: false,    // true lets you test with ?date=2026-12-01 (turn off before sharing)
+  storageKey: "measure-up-v1"  // change this to reset everyone's saved progress
+};
+/* ===================================================================== */
+
+const BANK = window.QUESTION_BANK || { days: [] };
+const $ = (id) => document.getElementById(id);
+const LETTERS = ["A", "B", "C", "D"];
+
+// ---------- storage (falls back to memory if blocked) ----------
+let memoryStore = {};
+function load() {
+  try { return JSON.parse(localStorage.getItem(CONFIG.storageKey)) || {}; }
+  catch (e) { return memoryStore; }
+}
+function save(data) {
+  memoryStore = data;
+  try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(data)); } catch (e) { /* in-memory only */ }
+}
+
+// ---------- dates ----------
+function parseYMD(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+function today() {
+  if (CONFIG.allowDateOverride) {
+    const p = new URLSearchParams(location.search).get("date");
+    if (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) return parseYMD(p);
+  }
+  const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+const isWeekend = (d) => d.getDay() === 0 || d.getDay() === 6;
+
+// Returns {status, index, dayNumber}
+function resolveDay(t) {
+  const start = parseYMD(CONFIG.startDate);
+  if (t < start) return { status: "before", start };
+  if (CONFIG.weekdaysOnly && isWeekend(t)) return { status: "weekend" };
+  let n;
+  if (CONFIG.weekdaysOnly) {
+    n = 0;
+    for (let d = new Date(start); d < t; d.setDate(d.getDate() + 1)) if (!isWeekend(d)) n++;
+  } else {
+    n = Math.round((t - start) / 86400000);
+  }
+  const total = BANK.days.length;
+  if (!total) return { status: "empty" };
+  if (n >= total && !CONFIG.wrapAround) return { status: "finished" };
+  return { status: "ok", index: n % total, dayNumber: n + 1 };
+}
+
+// ---------- state ----------
+const T = today();
+const DAY = resolveDay(T);
+let data = load();
+data.days = data.days || {};
+const dayKey = DAY.status === "ok" ? String(DAY.dayNumber) : null;
+const questions = DAY.status === "ok" ? BANK.days[DAY.index] : [];
+let rec = dayKey ? (data.days[dayKey] || { picks: [] }) : null;
+let current = rec ? rec.picks.length : 0;
+
+function streak() {
+  if (!dayKey) return 0;
+  let n = DAY.dayNumber;
+  const complete = (k) => data.days[k] && data.days[k].picks.length === 5;
+  if (!complete(n)) n--;
+  let s = 0;
+  while (n > 0 && complete(n)) { s++; n--; }
+  return s;
+}
+function totalStars() {
+  return Object.values(data.days).reduce((a, r) => a + (r.score || 0), 0);
+}
+function score() {
+  return rec.picks.reduce((a, p, i) => a + (p === questions[i].answer ? 1 : 0), 0);
+}
+
+// ---------- rendering ----------
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function renderHeader() {
+  if (BANK.title) $("title").textContent = BANK.title;
+  if (BANK.subtitle) $("subtitle").textContent = BANK.subtitle;
+  const dateStr = T.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  $("dayPill").textContent = DAY.status === "ok" ? `Day ${DAY.dayNumber} · ${dateStr}` : dateStr;
+  $("streakPill").textContent = `🔥 Streak ${streak()}`;
+  $("starPill").textContent = `⭐ ${totalStars()}`;
+}
+
+function renderDots() {
+  const el = $("dots");
+  if (DAY.status !== "ok") { el.innerHTML = ""; return; }
+  el.innerHTML = questions.map((q, i) => {
+    let c = "dot";
+    if (i < rec.picks.length) c += rec.picks[i] === q.answer ? " ok" : " no";
+    else if (i === current) c += " now";
+    return `<span class="${c}"></span>`;
+  }).join("");
+}
+
+function notice(title, text) {
+  $("app").innerHTML = `<div class="notice"><h2>${title}</h2><p class="msg">${text}</p></div>`;
+}
+
+function renderQuestion() {
+  const q = questions[current];
+  const answered = rec.picks.length > current;
+  const pick = answered ? rec.picks[current] : null;
+  const tier = q.tier === "H" ? `<span class="chip h">Higher</span>` : `<span class="chip">Foundation</span>`;
+  const opts = q.options.map((o, i) => {
+    let cls = "opt", mark = "";
+    if (answered) {
+      if (i === q.answer) { cls += " correct"; mark = `<span class="mark" aria-label="correct answer">✓</span>`; }
+      else if (i === pick) { cls += " wrong"; mark = `<span class="mark" aria-label="your answer, incorrect">✗</span>`; }
+      else cls += " faded";
+    }
+    return `<button class="${cls}" data-i="${i}" ${answered ? "disabled" : ""}>
+      <span class="key">${LETTERS[i]}</span><span>${esc(o)}</span>${mark}</button>`;
+  }).join("");
+
+  let fb = "";
+  if (answered) {
+    const ok = pick === q.answer;
+    fb = `<div class="feedback show ${ok ? "ok" : "no"}" role="status">
+      <strong>${ok ? "Correct! ✓" : `Not quite. The answer is ${esc(q.options[q.answer])}.`}</strong>${esc(q.explain)}</div>
+      <div class="actions"><button class="btn" id="nextBtn">${current < 4 ? "Next question →" : "See my score"}</button></div>`;
+  }
+
+  $("app").innerHTML = `
+    <div class="meta"><span>Question ${current + 1} of 5</span><span class="chips"><span class="chip">${esc(q.topic)}</span>${tier}</span></div>
+    <div class="question" id="qtext">${esc(q.q)}</div>
+    <div class="options" role="group" aria-labelledby="qtext">${opts}</div>
+    ${fb}
+    <p class="sr">Press 1 to 4 or A to D to choose an answer.</p>`;
+
+  if (!answered) {
+    $("app").querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => choose(+b.dataset.i)));
+    $("app").querySelector(".opt").focus({ preventScroll: true });
+  } else {
+    const nb = $("nextBtn");
+    nb.addEventListener("click", () => { current++; draw(); });
+    nb.focus({ preventScroll: true });
+  }
+}
+
+function choose(i) {
+  if (rec.picks.length > current) return;
+  rec.picks.push(i);
+  if (rec.picks.length === 5) { rec.score = score(); rec.completed = new Date().toISOString(); }
+  data.days[dayKey] = rec;
+  save(data);
+  draw(true);
+}
+
+function renderDone() {
+  const s = score();
+  const msgs = ["Every mistake is a step. Read the explanations below and try again tomorrow.",
+    "A start! Check the worked answers below.", "Getting there. Have a look at the ones you missed.",
+    "Good work, more right than wrong.", "So close to perfect. Great effort!", "Perfect score! Brilliant measuring."];
+  const stars = Array.from({ length: 5 }, (_, i) => `<span class="${i < s ? "" : "off"}">★</span>`).join("");
+  const review = questions.map((q, i) => {
+    const ok = rec.picks[i] === q.answer;
+    return `<details><summary><span class="${ok ? "tick" : "cross"}">${ok ? "✓" : "✗"}</span>${esc(q.q)}</summary>
+      <div class="r-ans">${ok ? "" : `You chose ${esc(q.options[rec.picks[i]])}. `}Answer: <b>${esc(q.options[q.answer])}</b>. ${esc(q.explain)}</div></details>`;
+  }).join("");
+  $("app").innerHTML = `<div class="done">
+      <div class="msg">Today's score</div>
+      <div class="score">${s} / 5</div>
+      <div class="stars" aria-label="${s} out of 5 stars">${stars}</div>
+      <p class="msg">${msgs[s]}</p>
+      <div class="next" id="countdown">Next 5 questions unlock in …</div>
+    </div>
+    <div class="review"><h3 style="margin:0 0 4px">Review today's questions</h3>${review}</div>`;
+  tickCountdown();
+}
+
+function tickCountdown() {
+  const el = $("countdown"); if (!el) return;
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const ms = next - now;
+  if (ms <= 1000) { location.reload(); return; }
+  const h = Math.floor(ms / 3.6e6), m = Math.floor(ms % 3.6e6 / 6e4), s = Math.floor(ms % 6e4 / 1000);
+  const nextLabel = CONFIG.weekdaysOnly && (now.getDay() === 5 || now.getDay() === 6) ? "Next set on Monday" :
+    `Next 5 questions unlock in ${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+  el.textContent = nextLabel;
+  setTimeout(tickCountdown, 1000);
+}
+
+function draw() {
+  renderHeader();
+  renderDots();
+  if (DAY.status === "before") return notice("Not started yet", `The first questions unlock on ${DAY.start.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.`);
+  if (DAY.status === "weekend") return notice("It's the weekend 🎉", "No questions today. Your next 5 unlock on Monday.");
+  if (DAY.status === "finished") return notice("All done for the year!", "You've reached the end of the question bank. Well done.");
+  if (DAY.status === "empty") return notice("No questions found", "The question bank (questions.js) didn't load.");
+  if (current >= 5) return renderDone();
+  renderQuestion();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (DAY.status !== "ok" || current >= 5 || rec.picks.length > current) return;
+  const k = e.key.toUpperCase();
+  const i = "1234".includes(k) && k !== "" ? +k - 1 : LETTERS.indexOf(k);
+  if (i >= 0 && i < 4) choose(i);
+});
+
+draw();
+</script>
+</body>
+</html>
