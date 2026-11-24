@@ -129,7 +129,7 @@
 
   <div class="dots" id="dots" aria-hidden="true"></div>
   <main id="app" class="card" aria-live="polite"></main>
-  <footer>New questions unlock at midnight. Your progress is saved on this device.</footer>
+  <footer id="footer"></footer>
 </div>
 
 <script src="questions.js"></script>
@@ -137,6 +137,7 @@
 /* ======================= SETTINGS (edit these) ======================= */
 const CONFIG = {
   startDate: "2026-09-01",     // Day 1 of the question bank (YYYY-MM-DD)
+  unlockHour: 16,              // hour (0-23) the new set unlocks each day: 16 = 4pm, 6 = 6am, 0 = midnight
   weekdaysOnly: false,         // true = new set Mon–Fri only, nothing at weekends
   wrapAround: true,            // after the last day, start again from day 1
   allowDateOverride: false,    // true lets you test with ?date=2026-12-01 (turn off before sharing)
@@ -166,7 +167,21 @@ function today() {
     const p = new URLSearchParams(location.search).get("date");
     if (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) return parseYMD(p);
   }
-  const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  // Before the unlock hour, learners are still on the previous day's set
+  const n = new Date(Date.now() - CONFIG.unlockHour * 3600000);
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+function hourLabel(h) {
+  if (h === 0) return "midnight";
+  if (h === 12) return "noon";
+  return (h % 12) + (h < 12 ? "am" : "pm");
+}
+function nextUnlock() {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), CONFIG.unlockHour);
+  if (now >= next) next.setDate(next.getDate() + 1);
+  if (CONFIG.weekdaysOnly) while (isWeekend(next)) next.setDate(next.getDate() + 1);
+  return next;
 }
 const isWeekend = (d) => d.getDay() === 0 || d.getDay() === 6;
 
@@ -220,8 +235,8 @@ function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<":
 function renderHeader() {
   if (BANK.title) $("title").textContent = BANK.title;
   if (BANK.subtitle) $("subtitle").textContent = BANK.subtitle;
-  const dateStr = T.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-  $("dayPill").textContent = DAY.status === "ok" ? `Day ${DAY.dayNumber} · ${dateStr}` : dateStr;
+  $("dayPill").textContent = DAY.status === "ok" ? `Day ${DAY.dayNumber}` : "5 a day";
+  $("footer").textContent = `A new set of 5 unlocks every ${CONFIG.weekdaysOnly ? "weekday" : "day"} at ${hourLabel(CONFIG.unlockHour)}. Your progress is saved on this device.`;
   $("streakPill").textContent = `🔥 Streak ${streak()}`;
   $("starPill").textContent = `⭐ ${totalStars()}`;
 }
@@ -315,14 +330,13 @@ function renderDone() {
 
 function tickCountdown() {
   const el = $("countdown"); if (!el) return;
-  const now = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  const ms = next - now;
-  if (ms <= 1000) { location.reload(); return; }
+  const next = nextUnlock();
+  const ms = next - new Date();
+  if (ms <= 1000) { setTimeout(() => location.reload(), 1500); return; }
   const h = Math.floor(ms / 3.6e6), m = Math.floor(ms % 3.6e6 / 6e4), s = Math.floor(ms % 6e4 / 1000);
-  const nextLabel = CONFIG.weekdaysOnly && (now.getDay() === 5 || now.getDay() === 6) ? "Next set on Monday" :
-    `Next 5 questions unlock in ${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
-  el.textContent = nextLabel;
+  el.textContent = h >= 24
+    ? `Next set unlocks ${next.toLocaleDateString("en-GB", { weekday: "long" })} at ${hourLabel(CONFIG.unlockHour)}`
+    : `Next 5 questions unlock at ${hourLabel(CONFIG.unlockHour)}: ${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
   setTimeout(tickCountdown, 1000);
 }
 
@@ -330,7 +344,7 @@ function draw() {
   renderHeader();
   renderDots();
   if (DAY.status === "before") return notice("Not started yet", `The first questions unlock on ${DAY.start.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.`);
-  if (DAY.status === "weekend") return notice("It's the weekend 🎉", "No questions today. Your next 5 unlock on Monday.");
+  if (DAY.status === "weekend") return notice("It's the weekend 🎉", `No questions today. Your next 5 unlock on Monday at ${hourLabel(CONFIG.unlockHour)}.`);
   if (DAY.status === "finished") return notice("All done for the year!", "You've reached the end of the question bank. Well done.");
   if (DAY.status === "empty") return notice("No questions found", "The question bank (questions.js) didn't load.");
   if (current >= 5) return renderDone();
